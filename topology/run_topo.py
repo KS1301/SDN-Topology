@@ -31,6 +31,47 @@ def start_network():
     net.build()
     net.start()
 
+
+    # =========================
+    # ROUTER CONFIGURATION
+    # =========================
+
+    r1 = net.get("r1")
+    server = net.get("server")
+    hosts = [net.get(f"h{i}") for i in range(1, 6)]
+
+    # Configure router interfaces
+    r1.cmd("ip addr flush dev r1-eth0")
+    r1.cmd("ip addr flush dev r1-eth1")
+
+    r1.cmd("ip addr add 10.0.0.254/24 dev r1-eth0")
+    r1.cmd("ip addr add 10.0.1.1/24 dev r1-eth1")
+
+    r1.cmd("ip link set r1-eth0 up")
+    r1.cmd("ip link set r1-eth1 up")
+
+    # Enable IPv4 routing
+    r1.cmd("sysctl -w net.ipv4.ip_forward=1")
+
+    # Configure client default gateways
+    for host in hosts:
+        host.cmd("ip route replace default via 10.0.0.254")
+
+    # Configure server default gateway
+    server.cmd("ip route replace default via 10.0.1.1")
+
+    time.sleep(2)
+
+    print("Router interfaces:")
+    print(r1.cmd("ip -br addr"))
+    print("Server routes:")
+    print(server.cmd("ip route"))
+
+
+
+
+
+
     print("\n" + "=" * 60)
     print("SDN NETWORK STARTED")
     print("=" * 60)
@@ -38,23 +79,27 @@ def start_network():
     hosts = [net.get(f"h{i}") for i in range(1, 6)]
     server = net.get("server")
 
-    # Start the HTTP server only; no traffic starts automatically.
+  
+    # Start the HTTP server
     server.cmd(
         "python3 -m http.server 80 "
         "> /tmp/http_server.log 2>&1 &"
     )
     time.sleep(1)
 
-    server_check = server.cmd(
-        "curl -s --connect-timeout 2 -o /dev/null "
-        "-w '%{http_code}' http://10.0.0.10/"
+    # Test HTTP connectivity from client h1
+    server_check = hosts[0].cmd(
+        "curl -s --connect-timeout 3 --max-time 10 "
+        "-o /dev/null -w '%{http_code}' "
+        "http://10.0.1.10/"
     ).strip()
 
     if server_check != "200":
-        print("WARNING: HTTP server check failed.")
-        print("Check: server cat /tmp/http_server.log")
+        print("WARNING: Client-to-server HTTP check failed.")
+        print("Check router, Ryu flows and /tmp/http_server.log")
     else:
-        print("HTTP server check: OK")
+        print("Client-to-server HTTP check: OK")
+
 
     results_dir = "/mnt/c/Kuldeep/SDN-Topology/results"
     os.makedirs(results_dir, exist_ok=True)
@@ -105,7 +150,7 @@ def start_network():
                     "-w '%{http_code},"
                     "%{time_total},"
                     "%{size_download}' "
-                    "http://10.0.0.10/ "
+                    "http://10.0.1.10/ "
                     "; printf ',%s' \"$?\""
                 ).strip()
 
