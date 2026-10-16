@@ -1,0 +1,2 @@
+duration_seconds,total_attempts,successful_requests,failed_requests,requests_per_second,http_download_goodput_mbps,average_success_latency_ms
+30.609721899032593,150,150,0,4.900403881315259,0.043437180003978455,36.901959999999995

@@ -1,3 +1,4 @@
+
 from controller.flow_manager import add_flow
 
 
@@ -20,6 +21,15 @@ def switch_features_handler(controller, ev):
         )
     ]
 
+    # Count the table-miss FlowMod request
+    controller.flow_mod_requests += 1
+
     add_flow(datapath, 0, match, actions)
 
-    controller.logger.info("Table-Miss Flow Installed Successfully")
+    controller.logger.info(
+        "[FLOW_REQUEST] switch=%s type=TABLE_MISS total=%d",
+        datapath.id,
+        controller.flow_mod_requests
+    )
+
+    controller.logger.info("Table-Miss Flow Request Sent")

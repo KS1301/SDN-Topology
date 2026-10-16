@@ -14,6 +14,11 @@ from controller.arp_handler import handle_arp
 def packet_in_handler(controller, ev):
 
     msg = ev.msg
+    controller.logger.info(
+    "[METRIC] PACKET_IN switch=%s total=%d",
+    msg.datapath.id,
+    controller.packet_in_count
+    )
     datapath = msg.datapath
     in_port = msg.match['in_port']
 
@@ -144,6 +149,7 @@ def packet_in_handler(controller, ev):
             eth_dst=dst
         )
 
+        controller.flow_mod_requests += 1
         add_flow(
             datapath,
             priority=1,
